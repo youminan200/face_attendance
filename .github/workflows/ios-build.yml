@@ -1,0 +1,65 @@
+name: iOS Unsigned IPA Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build Unsigned IPA
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Xcode 16 활성화 (iOS 18 카메라 API 호환)
+      - name: Select Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Resolve Project Directory
+        id: proj-dir
+        run: |
+          if [ -d "face_attendance" ] && [ -f "face_attendance/pubspec.yaml" ]; then
+            echo "target_dir=face_attendance" >> $GITHUB_OUTPUT
+            echo "Working directory set to face_attendance"
+          else
+            echo "target_dir=." >> $GITHUB_OUTPUT
+            echo "Working directory set to root"
+          fi
+
+      - name: Install Flutter Dependencies
+        working-directory: ${{ steps.proj-dir.outputs.target_dir }}
+        run: |
+          flutter pub get
+
+      - name: Build iOS Application (No Codesign)
+        working-directory: ${{ steps.proj-dir.outputs.target_dir }}
+        run: |
+          flutter build ios --release --no-codesign
+
+      - name: Package Payload into Unsigned IPA
+        working-directory: ${{ steps.proj-dir.outputs.target_dir }}
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r -y face_attendance_unsigned.ipa Payload
+          ls -lh face_attendance_unsigned.ipa
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: face_attendance_unsigned_ipa
+          path: |
+            ${{ steps.proj-dir.outputs.target_dir }}/face_attendance_unsigned.ipa
+          retention-days: 7
