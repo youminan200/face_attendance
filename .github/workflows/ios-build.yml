@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Xcode 16 활성화 (iOS 18 카메라 API 호환)
+      # Xcode 16 활성화
       - name: Select Xcode 16
         uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -46,7 +46,21 @@ jobs:
       - name: Build iOS Application (No Codesign)
         working-directory: ${{ steps.proj-dir.outputs.target_dir }}
         run: |
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign || (
+            echo "Falling back to direct xcodebuild archive..." && \
+            cd ios && \
+            xcodebuild -workspace Runner.xcworkspace \
+              -scheme Runner \
+              -configuration Release \
+              -destination 'generic/platform=iOS' \
+              -archivePath ../build/ios/archive/Runner.xcarchive \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              archive && \
+            mkdir -p ../build/ios/iphoneos && \
+            cp -r ../build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app ../build/ios/iphoneos/
+          )
 
       - name: Package Payload into Unsigned IPA
         working-directory: ${{ steps.proj-dir.outputs.target_dir }}
