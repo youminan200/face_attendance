@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: face_attendance_api
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - face_attendance_data:/app/data
+    environment:
+      - DB_TYPE=sqlite
+      - SQLITE_PATH=/app/data/face_attendance.db
+
+volumes:
+  face_attendance_data:
+    driver: local

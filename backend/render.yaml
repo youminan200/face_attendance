@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: face-attendance-api
+    runtime: python
+    region: singapore # 한국에서 가장 가까운 싱가포르 리전 권장
+    plan: free # 무료 플랜 지원
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
+      - key: DB_TYPE
+        value: sqlite
+      - key: SQLITE_PATH
+        value: /opt/render/project/src/face_attendance.db
